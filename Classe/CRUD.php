@@ -5,7 +5,7 @@ class CRUD extends PDO {
     // Ouvre la connexion à la base de données de la librairie.
     public function __construct(){
         parent::__construct(
-            'mysql:host=localhost; dbname=librairie_enfants; port=3306; charset=utf8mb4', 'root', 'admin');
+            'mysql:host=localhost; dbname=librairie_enfants; port=3306; charset=utf8mb4', 'root', '');
 
     }
     // Récupère toutes les lignes d'une table, triées selon le champ choisi.
