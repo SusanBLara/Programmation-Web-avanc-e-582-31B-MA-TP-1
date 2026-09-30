@@ -3,6 +3,8 @@ require_once('Classe/Book.php');
 
 $crud = new Book;
 $books = $crud->all();
+$categories = $crud->select('category', 'name');
+$categoryNames = array_column($categories, 'name', 'id');
 
 // Les couvertures disponibles sont associées aux titres des livres.
 $bookImages = array(
@@ -33,6 +35,7 @@ $bookImages = array(
                 <th>Image</th>
                 <th class="book-title-column">Titre</th>
                 <th>Auteur(s)</th>
+                <th>Catégorie</th>
                 <th class="book-description-column">Description</th>
                 <th>Pages</th>
                 <th>Prix</th>
@@ -74,6 +77,7 @@ $bookImages = array(
                 <?php } ?>
             </td>
 
+            <td><?= htmlspecialchars($categoryNames[$book['category_id']] ?? 'Non renseignée', ENT_QUOTES, 'UTF-8'); ?></td>
             <td><?= htmlspecialchars('' . $book['description'], ENT_QUOTES, 'UTF-8'); ?></td>
             <td><?= $book['page_count']; ?></td>
             <td class="book-price"><?= $book['price']; ?> $</td>
