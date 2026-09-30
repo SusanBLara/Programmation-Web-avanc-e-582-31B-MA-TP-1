@@ -1,5 +1,7 @@
 <?php
 require_once('Classe/Category.php');
+require_once('Classe/Author.php');
+$authors = (new Author)->all();
 
 $categoryModel = new Category;
 $categories = $categoryModel->all();
@@ -23,17 +25,17 @@ $categories = $categoryModel->all();
                 <input type="text" name="title" required maxlength="150">
             </label>
 
-            <label for="author-1">Auteur principal
-                <input type="text" id="author-1" name="author_1" maxlength="100" required>
-            </label>
-
-            <label for="author-2">Deuxième auteur (facultatif)
-                <input type="text" id="author-2" name="author_2" maxlength="100">
-            </label>
-
-            <label for="author-3">Troisième auteur (facultatif)
-                <input type="text" id="author-3" name="author_3" maxlength="100">
-            </label>
+            <fieldset>
+                <legend>Auteur(s) — choisir au moins un auteur</legend>
+                <?php foreach($authors as $author){ ?>
+                    <label>
+                        <input type="checkbox" name="authors[]" value="<?= $author['id']; ?>">
+                        <?= htmlspecialchars($author['name'], ENT_QUOTES, 'UTF-8'); ?>
+                    </label>
+                <?php } ?>
+                <?php if(!$authors){ ?><p>Aucun auteur enregistré.</p><?php } ?>
+                <a href="author-create.php">Ajouter un auteur</a>
+            </fieldset>
 
             <label>Description
                 <input type="text" name="description">

@@ -8,14 +8,12 @@ class CRUD extends PDO {
             'mysql:host=localhost; dbname=librairie_enfants; port=3306; charset=utf8mb4', 'root', 'admin');
 
     }
-
     // Récupère toutes les lignes d'une table, triées selon le champ choisi.
     public function select(string $table, $field = "id", $order = "ASC"):array{
         $sql = "SELECT * FROM $table ORDER BY $field $order";
         $stmt = $this->query($sql);
         return $stmt->fetchAll();
     }
-
     // Cherche une ligne par son id, ou par un autre champ si on le précise.
     public function selectId(string $table, int|string $value, $field = 'id'):bool|array{
         $sql = "SELECT * FROM $table WHERE $field = :$field";
@@ -31,7 +29,6 @@ class CRUD extends PDO {
             return false;
         }
     }
-
     // Ajoute les données dans la table choisie.
     public function insert(string $table, array $data):bool|int{
         // Les clés du tableau donnent les colonnes et les paramètres à préparer.
@@ -56,7 +53,6 @@ class CRUD extends PDO {
             return false;
         }
     }
-
     // Met à jour les données en utilisant l'id, ou un autre champ fourni dans le tableau.
     public function update(string $table, array $data, $field = 'id'):bool{
         // Construit la liste des colonnes à modifier à partir des données reçues.
@@ -64,7 +60,6 @@ class CRUD extends PDO {
         foreach($data as $key=>$value){
             $fieldName .= "$key = :$key, ";
         }
-
         // Retire la dernière virgule avant de compléter la requête.
         $fieldName = rtrim($fieldName, ', ');
         $sql = "UPDATE $table SET $fieldName WHERE $field = :$field;";
@@ -81,7 +76,6 @@ class CRUD extends PDO {
             return false;
         }
     }
-
     // Supprime les lignes avec l'id donné, ou avec un autre champ si on le précise.
     public function delete(string $table, int|string $value, $field = 'id'):bool{
         $sql = "DELETE FROM $table WHERE $field = :$field";

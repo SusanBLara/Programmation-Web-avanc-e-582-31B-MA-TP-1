@@ -8,12 +8,10 @@ class Book extends CRUD {
     public function all():array{
         return $this->select($this->table, 'title');
     }
-
     // Cherche un livre avec son id.
     public function find(int|string $id):array|bool{
         return $this->selectId($this->table, $id);
     }
-
     // Récupère seulement les auteurs associés à ce livre.
     public function authors(int $id):array{
         $authors = $this->select('author', 'name');
@@ -28,16 +26,16 @@ class Book extends CRUD {
         }
         return $bookAuthors;
     }
-
     // Vérifie les informations du livre et prépare les données à enregistrer.
     private function bookData(array $data):array{
-        if(!isset($data['title']) or $data['title'] == ''){
+        $title = trim($data['title'] ?? '');
+        if($title === ''){
             throw new Exception('Le titre est obligatoire.');
         }
         if(!isset($data['price']) or $data['price'] == ''){
             throw new Exception('Le prix est obligatoire.');
         }
-        if($data['price'] < 0 or $data['price'] > 99999999.99){
+        if(!is_numeric($data['price']) || $data['price'] < 0 || $data['price'] > 99999999.99){
             throw new Exception('Le prix doit être compris entre 0 et 99999999.99.');
         }
         $categoryId = filter_var($data['category_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
@@ -51,13 +49,13 @@ class Book extends CRUD {
         // Si le nombre de pages est vide, on enregistre NULL dans la base.
         $pageCount = null;
         if(isset($data['page_count']) && $data['page_count'] != ''){
-            $pageCount = $data['page_count'];
-            if($pageCount < 1 or $pageCount > 2147483647){
+            $pageCount = filter_var($data['page_count'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 2147483647]]);
+            if($pageCount === false){
                 throw new Exception('Le nombre de pages est incorrect.');
             }
         }
         return array(
-            'title' => $data['title'],
+            'title' => $title,
             'description' => $data['description'],
             'page_count' => $pageCount,
             'price' => $data['price'],
@@ -66,53 +64,40 @@ class Book extends CRUD {
             'category_id' => $categoryId
         );
     }
-
-    // Ajoute le livre et le relie à ses auteurs, en créant ceux qui n'existent pas encore.
+    // Ajoute le livre et le relie aux auteurs choisis.
     public function insertBook(array $data):bool|int{
         $values = $this->bookData($data);
-        if(!isset($data['author_1']) or $data['author_1'] == ''){
-            throw new Exception("L'auteur principal est obligatoire.");
+        if(empty($data['authors']) || !is_array($data['authors'])){
+            throw new Exception('Choisissez au moins un auteur.');
         }
         $authorIds = array();
-        $fields = array('author_1', 'author_2', 'author_3');
-        foreach($fields as $field){
-            if(isset($data[$field]) && $data[$field] != ''){
-                $name = $data[$field];
-                // Réutilise l'auteur si son nom existe déjà, sinon le crée.
-                $sql = "SELECT * FROM author WHERE name = :name";
-                $stmt = $this->prepare($sql);
-                $stmt->bindValue(':name', $name);
-                $stmt->execute();
-                if($stmt->rowCount() >= 1){
-                    $author = $stmt->fetch();
-                    $authorId = $author['id'];
-                }else{
-                    $authorId = $this->insert('author', array('name' => $name));
-                    if(!$authorId){
-                        throw new Exception("L'auteur n'a pas été enregistré.");
-                    }
-                }
-                // Évite d'associer deux fois le même auteur au livre.
-                $alreadySelected = false;
-                foreach($authorIds as $selectedId){
-                    if($selectedId == $authorId){
-                        $alreadySelected = true;
-                    }
-                }
-                if(!$alreadySelected){
-                    $authorIds[] = $authorId;
-                }
+        foreach($data['authors'] as $value){
+            $authorId = filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+            if($authorId === false || !$this->selectId('author', $authorId)){
+                throw new Exception('Auteur introuvable.');
             }
+            $authorIds[$authorId] = $authorId;
         }
-        $id = $this->insert($this->table, $values);
-        if($id){
+        $this->beginTransaction();
+        try{
+            $id = $this->insert($this->table, $values);
+            if(!$id){
+                throw new Exception("Le livre n'a pas été enregistré.");
+            }
             foreach($authorIds as $authorId){
-                $this->insert('book_author', array('book_id' => $id, 'author_id' => $authorId));
+                if(!$this->insert('book_author', ['book_id' => $id, 'author_id' => $authorId])){
+                    throw new Exception("L'auteur n'a pas été associé au livre.");
+                }
             }
+            $this->commit();
+            return $id;
+        }catch(Throwable $e){
+            if($this->inTransaction()){
+                $this->rollBack();
+            }
+            throw $e;
         }
-        return $id;
     }
-
     // Met à jour les informations du livre et les auteurs qui lui sont associés.
     public function updateBook(array $data):bool{
         $id = $data['id'];
@@ -146,11 +131,31 @@ class Book extends CRUD {
         }
         return $update;
     }
-
-    // Supprime le livre après avoir retiré ses liens avec les auteurs.
+    // Supprime le livre et ses auteurs s'ils n'ont plus aucun autre livre.
     public function remove(int $id):bool{
-        // Supprime les liens avant le livre pour respecter les clés étrangères.
-        $this->delete('book_author', $id, 'book_id');
-        return $this->delete($this->table, $id);
+        $this->beginTransaction();
+        try{
+            $authors = $this->authors($id);
+            // Supprime les liens avant le livre pour respecter les clés étrangères.
+            if(!$this->delete('book_author', $id, 'book_id') || !$this->delete($this->table, $id)){
+                $this->rollBack();
+                return false;
+            }
+            // Garde les auteurs qui sont encore associés à un autre livre.
+            $stmt = $this->prepare('DELETE FROM author WHERE id = :id AND NOT EXISTS (SELECT 1 FROM book_author WHERE author_id = :author_id)');
+            foreach($authors as $author){
+                if(!$stmt->execute(['id' => $author['id'], 'author_id' => $author['id']])){
+                    $this->rollBack();
+                    return false;
+                }
+            }
+            return $this->commit();
+        }catch(Throwable $e){
+            // Annule les changements si une des suppressions échoue.
+            if($this->inTransaction()){
+                $this->rollBack();
+            }
+            throw $e;
+        }
     }
 }
