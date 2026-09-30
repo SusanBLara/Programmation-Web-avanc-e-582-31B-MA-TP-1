@@ -19,5 +19,6 @@
         <img class="home-picture" src="images/librairie-enfants.jpg" width="1200" height="1200"
              alt="Une librairie féerique avec des étagères en forme de maisons, des étoiles suspendues et des livres pour enfants.">
     </main>
+    <?php include 'includes/footer.php'; ?>
 </body>
 </html>

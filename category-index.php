@@ -22,5 +22,6 @@ $categories = $model->all();
             <?php } ?>
         </tbody>
     </table>
+    <?php include 'includes/footer.php'; ?>
 </body>
 </html>

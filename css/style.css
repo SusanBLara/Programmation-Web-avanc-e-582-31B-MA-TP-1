@@ -341,6 +341,11 @@ td a { font-weight: bold; }
 .book-title-column { width: 17%; }
 .book-description-column { width: 28%; }
 
+.books-table th.book-title-column,
+.books-table th.book-description-column {
+    text-align: center;
+}
+
 /* Garde le prix et l'âge sur une seule ligne. */
 .book-price, .book-age {
     white-space: nowrap;
@@ -351,3 +356,17 @@ td a { font-weight: bold; }
     max-height: 104px;
 }
 
+footer {
+    margin-top: 48px;
+    padding: 22px 18px;
+    border-top: 5px solid #4DB6FF;
+    border-radius: 12px 12px 0 0;
+    background-color: #ffffff;
+    color: #243449;
+    font-size: 14px;
+    text-align: center;
+}
+
+footer p {
+    margin: 0;
+}

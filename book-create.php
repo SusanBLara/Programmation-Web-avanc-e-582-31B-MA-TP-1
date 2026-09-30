@@ -68,5 +68,6 @@ $categories = $categoryModel->all();
             <input type="submit" class="btn" value="Enregistrer">
         </form>
     </div>
+    <?php include 'includes/footer.php'; ?>
 </body>
 </html>

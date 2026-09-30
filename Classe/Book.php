@@ -4,16 +4,18 @@ require_once('Classe/CRUD.php');
 class Book extends CRUD {
     protected string $table = 'book';
 
+    // Récupère tous les livres en les classant par titre.
     public function all():array{
         return $this->select($this->table, 'title');
     }
 
+    // Cherche un livre avec son id.
     public function find(int|string $id):array|bool{
         return $this->selectId($this->table, $id);
     }
 
+    // Récupère seulement les auteurs associés à ce livre.
     public function authors(int $id):array{
-        // Garde seulement les auteurs associés à ce livre.
         $authors = $this->select('author', 'name');
         $relations = $this->select('book_author', 'book_id');
         $bookAuthors = array();
@@ -27,6 +29,7 @@ class Book extends CRUD {
         return $bookAuthors;
     }
 
+    // Vérifie les informations du livre et prépare les données à enregistrer.
     private function bookData(array $data):array{
         if(!isset($data['title']) or $data['title'] == ''){
             throw new Exception('Le titre est obligatoire.');
@@ -64,6 +67,7 @@ class Book extends CRUD {
         );
     }
 
+    // Ajoute le livre et le relie à ses auteurs, en créant ceux qui n'existent pas encore.
     public function insertBook(array $data):bool|int{
         $values = $this->bookData($data);
         if(!isset($data['author_1']) or $data['author_1'] == ''){
@@ -109,6 +113,7 @@ class Book extends CRUD {
         return $id;
     }
 
+    // Met à jour les informations du livre et les auteurs qui lui sont associés.
     public function updateBook(array $data):bool{
         $id = $data['id'];
         if(!$this->find($id)){
@@ -142,6 +147,7 @@ class Book extends CRUD {
         return $update;
     }
 
+    // Supprime le livre après avoir retiré ses liens avec les auteurs.
     public function remove(int $id):bool{
         // Supprime les liens avant le livre pour respecter les clés étrangères.
         $this->delete('book_author', $id, 'book_id');

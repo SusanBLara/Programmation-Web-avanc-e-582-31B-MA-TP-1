@@ -59,5 +59,6 @@ if($category){
             <input type="submit" value="Supprimer" class="btn red">
         </form>
     </div>
+    <?php include 'includes/footer.php'; ?>
 </body>
 </html>
