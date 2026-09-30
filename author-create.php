@@ -1,17 +1,72 @@
 <?php
+
+session_start();
+$fromBook = false;
+
+if(isset($_GET['from']) && $_GET['from'] == 'book'){
+    $fromBook = true;
+}
+
+$formAction = 'author-create.php';
+if($fromBook){
+    $formAction = 'author-create.php?from=book';
+}
+
+// Garde les champs du livre pendant l'ajout d'un auteur.
+if($fromBook && $_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['save_book_draft'])){
+    $draft = array();
+
+    foreach(array('title', 'description', 'page_count', 'price', 'edition', 'age_group', 'category_id') as $field){
+        $draft[$field] = '';
+
+        if(isset($_POST[$field]) && is_string($_POST[$field])){
+            $draft[$field] = $_POST[$field];
+        }
+    }
+
+    $draft['authors'] = array();
+
+    if(isset($_POST['authors']) && is_array($_POST['authors'])){
+
+        foreach($_POST['authors'] as $authorId){
+            if(is_string($authorId)){
+                $draft['authors'][] = $authorId;
+            }
+        }
+    }
+
+    $_SESSION['book_draft'] = $draft;
+    header('Location: author-create.php?from=book');
+    exit;
+}
+
 require_once('Classe/Author.php');
+
 $error = '';
-$data = ['name' => '', 'country' => '', 'birth_year' => '', 'biography' => ''];
-if(($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST'){
+$data = array('name' => '', 'country' => '', 'birth_year' => '', 'biography' => '');
+
+if($_SERVER['REQUEST_METHOD'] == 'POST'){
     foreach($data as $field => $value){
-        $data[$field] = is_string($_POST[$field] ?? null) ? $_POST[$field] : '';
+        if(isset($_POST[$field]) && is_string($_POST[$field])){
+            $data[$field] = $_POST[$field];
+        }
     }
     try{
-        if(!(new Author)->insertAuthor($data)){
+        $authorModel = new Author;
+        $authorId = $authorModel->insertAuthor($data);
+        if(!$authorId){
             throw new Exception("L'auteur n'a pas été enregistré.");
         }
-        header('Location: author-index.php');
+        if($fromBook){
+
+            // Sélectionne le nouvel auteur et reprend la création du livre.
+            $_SESSION['book_draft']['authors'][] = $authorId;
+            header('Location: book-create.php?resume=1');
+        }else{
+            header('Location: author-index.php');
+        }
         exit;
+        
     }catch(Exception $e){
         $error = $e->getMessage();
     }
@@ -28,7 +83,7 @@ if(($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST'){
 <body>
     <?php require_once('includes/nav.php'); ?>
     <div class="container">
-        <form action="author-create.php" method="post">
+        <form action="<?= $formAction; ?>" method="post">
             <h2>Nouvel auteur</h2>
             <?php if($error !== ''){ ?><p role="alert"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></p><?php } ?>
             <label>Nom
@@ -44,7 +99,11 @@ if(($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST'){
                 <textarea name="biography" rows="4" maxlength="16000"><?= htmlspecialchars($data['biography'], ENT_QUOTES, 'UTF-8'); ?></textarea>
             </label>
             <input type="submit" class="btn" value="Enregistrer">
-            <a href="author-index.php">Retour aux auteurs</a>
+            <?php if($fromBook){ ?>
+                <a href="book-create.php?resume=1">Retour au livre</a>
+            <?php }else{ ?>
+                <a href="author-index.php">Retour aux auteurs</a>
+            <?php } ?>
         </form>
     </div>
     <?php include 'includes/footer.php'; ?>

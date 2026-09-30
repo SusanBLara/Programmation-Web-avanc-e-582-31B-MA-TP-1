@@ -11,10 +11,22 @@ class Author extends CRUD {
 
     // Vérifie les informations et ajoute l'auteur dans la base.
     public function insertAuthor(array $data):bool|int{
-        $name = trim($data['name'] ?? '');
-        $country = trim($data['country'] ?? '');
-        $biography = trim($data['biography'] ?? '');
-        $year = trim($data['birth_year'] ?? '');
+        $name = '';
+        if(isset($data['name'])){
+            $name = trim($data['name']);
+        }
+        $country = '';
+        if(isset($data['country'])){
+            $country = trim($data['country']);
+        }
+        $biography = '';
+        if(isset($data['biography'])){
+            $biography = trim($data['biography']);
+        }
+        $year = '';
+        if(isset($data['birth_year'])){
+            $year = trim($data['birth_year']);
+        }
         if($name === ''){
             throw new Exception("Le nom de l'auteur est obligatoire.");
         }
@@ -23,17 +35,25 @@ class Author extends CRUD {
         }
         $birthYear = null;
         if($year !== ''){
-            $birthYear = filter_var($year, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => (int) date('Y')]]);
+            $birthYear = filter_var($year, FILTER_VALIDATE_INT, array('options' => array('min_range' => 1, 'max_range' => (int) date('Y'))));
             if($birthYear === false){
                 throw new Exception("L'année de naissance est incorrecte.");
             }
         }
         $stmt = $this->prepare('SELECT id FROM author WHERE name = :name');
-        $stmt->execute(['name' => $name]);
+        $stmt->bindValue(':name', $name);
+        $stmt->execute();
         if($stmt->fetch()){
             throw new Exception('Cet auteur est déjà enregistré.');
         }
-        return $this->insert($this->table, ['name' => $name, 'country' => $country === '' ? null : $country,
-            'birth_year' => $birthYear, 'biography' => $biography === '' ? null : $biography]);
+        if($country == ''){
+            $country = null;
+        }
+        if($biography == ''){
+            $biography = null;
+        }
+        $values = array('name' => $name, 'country' => $country,
+            'birth_year' => $birthYear, 'biography' => $biography);
+        return $this->insert($this->table, $values);
     }
 }

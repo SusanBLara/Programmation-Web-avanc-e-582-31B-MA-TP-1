@@ -1,4 +1,5 @@
 <?php
+
 if($_SERVER['REQUEST_METHOD'] != 'POST'){
     header('location:book-index.php');
     die();
@@ -23,6 +24,7 @@ try{
     }else{
         echo "L'opération n'a pas été effectuée.";
     }
+    
 }catch(Exception $e){
     echo htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8');
 }

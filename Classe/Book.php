@@ -28,7 +28,10 @@ class Book extends CRUD {
     }
     // Vérifie les informations du livre et prépare les données à enregistrer.
     private function bookData(array $data):array{
-        $title = trim($data['title'] ?? '');
+        $title = '';
+        if(isset($data['title'])){
+            $title = trim($data['title']);
+        }
         if($title === ''){
             throw new Exception('Le titre est obligatoire.');
         }
@@ -38,7 +41,11 @@ class Book extends CRUD {
         if(!is_numeric($data['price']) || $data['price'] < 0 || $data['price'] > 99999999.99){
             throw new Exception('Le prix doit être compris entre 0 et 99999999.99.');
         }
-        $categoryId = filter_var($data['category_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $categoryId = null;
+        if(isset($data['category_id'])){
+            $categoryId = $data['category_id'];
+        }
+        $categoryId = filter_var($categoryId, FILTER_VALIDATE_INT, array('options' => array('min_range' => 1)));
         if($categoryId === false){
             throw new Exception('Choisissez une catégorie valide.');
         }
@@ -49,7 +56,7 @@ class Book extends CRUD {
         // Si le nombre de pages est vide, on enregistre NULL dans la base.
         $pageCount = null;
         if(isset($data['page_count']) && $data['page_count'] != ''){
-            $pageCount = filter_var($data['page_count'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 2147483647]]);
+            $pageCount = filter_var($data['page_count'], FILTER_VALIDATE_INT, array('options' => array('min_range' => 1, 'max_range' => 2147483647)));
             if($pageCount === false){
                 throw new Exception('Le nombre de pages est incorrect.');
             }
@@ -72,31 +79,22 @@ class Book extends CRUD {
         }
         $authorIds = array();
         foreach($data['authors'] as $value){
-            $authorId = filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+            $authorId = filter_var($value, FILTER_VALIDATE_INT, array('options' => array('min_range' => 1)));
             if($authorId === false || !$this->selectId('author', $authorId)){
                 throw new Exception('Auteur introuvable.');
             }
             $authorIds[$authorId] = $authorId;
         }
-        $this->beginTransaction();
-        try{
-            $id = $this->insert($this->table, $values);
-            if(!$id){
-                throw new Exception("Le livre n'a pas été enregistré.");
-            }
-            foreach($authorIds as $authorId){
-                if(!$this->insert('book_author', ['book_id' => $id, 'author_id' => $authorId])){
-                    throw new Exception("L'auteur n'a pas été associé au livre.");
-                }
-            }
-            $this->commit();
-            return $id;
-        }catch(Throwable $e){
-            if($this->inTransaction()){
-                $this->rollBack();
-            }
-            throw $e;
+        $id = $this->insert($this->table, $values);
+        if(!$id){
+            throw new Exception("Le livre n'a pas été enregistré.");
         }
+        foreach($authorIds as $authorId){
+            if(!$this->insert('book_author', array('book_id' => $id, 'author_id' => $authorId))){
+                throw new Exception("L'auteur n'a pas été associé au livre.");
+            }
+        }
+        return $id;
     }
     // Met à jour les informations du livre et les auteurs qui lui sont associés.
     public function updateBook(array $data):bool{
@@ -124,38 +122,42 @@ class Book extends CRUD {
         $update = $this->update($this->table, $values);
         if($update){
             // Remplace les anciennes associations par les auteurs cochés.
-            $this->delete('book_author', $id, 'book_id');
+            if(!$this->delete('book_author', $id, 'book_id')){
+                return false;
+            }
             foreach($authorIds as $authorId){
-                $this->insert('book_author', array('book_id' => $id, 'author_id' => $authorId));
+                if(!$this->insert('book_author', array('book_id' => $id, 'author_id' => $authorId))){
+                    return false;
+                }
             }
         }
         return $update;
     }
     // Supprime le livre et ses auteurs s'ils n'ont plus aucun autre livre.
     public function remove(int $id):bool{
-        $this->beginTransaction();
-        try{
-            $authors = $this->authors($id);
-            // Supprime les liens avant le livre pour respecter les clés étrangères.
-            if(!$this->delete('book_author', $id, 'book_id') || !$this->delete($this->table, $id)){
-                $this->rollBack();
-                return false;
+        $authors = $this->authors($id);
+        // Supprime les liens avant le livre pour respecter les clés étrangères.
+        if(!$this->delete('book_author', $id, 'book_id')){
+            return false;
+        }
+        if(!$this->delete($this->table, $id)){
+            return false;
+        }
+        // Garde les auteurs qui sont encore associés à un autre livre.
+        $relations = $this->select('book_author', 'book_id');
+        foreach($authors as $author){
+            $hasBook = false;
+            foreach($relations as $relation){
+                if($relation['author_id'] == $author['id']){
+                    $hasBook = true;
+                }
             }
-            // Garde les auteurs qui sont encore associés à un autre livre.
-            $stmt = $this->prepare('DELETE FROM author WHERE id = :id AND NOT EXISTS (SELECT 1 FROM book_author WHERE author_id = :author_id)');
-            foreach($authors as $author){
-                if(!$stmt->execute(['id' => $author['id'], 'author_id' => $author['id']])){
-                    $this->rollBack();
+            if(!$hasBook){
+                if(!$this->delete('author', $author['id'])){
                     return false;
                 }
             }
-            return $this->commit();
-        }catch(Throwable $e){
-            // Annule les changements si une des suppressions échoue.
-            if($this->inTransaction()){
-                $this->rollBack();
-            }
-            throw $e;
         }
+        return true;
     }
 }

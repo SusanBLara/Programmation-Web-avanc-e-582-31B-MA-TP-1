@@ -1,4 +1,7 @@
 <?php
+
+session_start();
+
 if($_SERVER['REQUEST_METHOD'] != 'POST'){
     header('location:book-index.php');
     die();
@@ -11,6 +14,7 @@ try{
     $insert = $crud->insertBook($_POST);
 
     if($insert){
+        unset($_SESSION['book_draft']);
         header("location:book-show.php?id=$insert");
         die();
     }else{

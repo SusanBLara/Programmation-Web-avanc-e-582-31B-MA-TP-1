@@ -1,5 +1,7 @@
 <?php
+
 require_once('Classe/Category.php');
+
 $model = new Category;
 $categories = $model->all();
 ?>

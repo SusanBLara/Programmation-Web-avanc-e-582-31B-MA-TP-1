@@ -4,16 +4,12 @@ require_once('Classe/Book.php');
 $crud = new Book;
 $books = $crud->all();
 $categories = $crud->select('category', 'name');
-$categoryNames = array_column($categories, 'name', 'id');
+$categoryNames = array();
 
-// Les couvertures disponibles sont associées aux titres des livres.
-$bookImages = array(
-    "L'Histoire sans fin" => "images/L'histoir.jpg",
-    'Le Petit Chaperon rouge' => 'images/La-petite-chaperon.jpg',
-    'Le Petit Prince' => 'images/L-petit-prince.jpg',
-    'Les Aventures de Tom Sawyer' => 'images/Las-aventures-de-Tom.jpg',
-    'Martine à la ferme' => 'images/Martin-a-la-ferme.jpg'
-);
+foreach($categories as $category){
+    $categoryNames[$category['id']] = $category['name'];
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -32,7 +28,6 @@ $bookImages = array(
     <table class="books-table">
         <thead>
             <tr>
-                <th>Image</th>
                 <th class="book-title-column">Titre</th>
                 <th>Auteur(s)</th>
                 <th>Catégorie</th>
@@ -47,24 +42,12 @@ $bookImages = array(
         <tbody>
     <?php foreach($books as $book){ 
         $authors = $crud->authors($book['id']);
-        // Remet l'image à zéro pour ne pas garder celle du livre précédent.
-        $bookImage = '';
-        if(isset($bookImages[$book['title']])){
-            $bookImage = $bookImages[$book['title']];
+        $categoryName = 'Non renseignée';
+        if(isset($categoryNames[$book['category_id']])){
+            $categoryName = $categoryNames[$book['category_id']];
         }
     ?>
         <tr>
-            <td>
-                <?php
-                if($bookImage != ''){ ?>
-                    <a href="book-show.php?id=<?= $book['id']; ?>">
-                        <img class="book-cover" src="<?= htmlspecialchars($bookImage, ENT_QUOTES, 'UTF-8'); ?>"
-                             alt="Couverture de <?= htmlspecialchars($book['title'], ENT_QUOTES, 'UTF-8'); ?>">
-                    </a>
-                <?php }else{ ?>
-                    <span class="cover-unavailable">Image non disponible</span>
-                <?php } ?>
-            </td>
             <td>
                 <a href="book-show.php?id=<?= $book['id']; ?>">
                     <?= htmlspecialchars($book['title'], ENT_QUOTES, 'UTF-8'); ?>
@@ -77,7 +60,7 @@ $bookImages = array(
                 <?php } ?>
             </td>
 
-            <td><?= htmlspecialchars($categoryNames[$book['category_id']] ?? 'Non renseignée', ENT_QUOTES, 'UTF-8'); ?></td>
+            <td><?= htmlspecialchars($categoryName, ENT_QUOTES, 'UTF-8'); ?></td>
             <td><?= htmlspecialchars('' . $book['description'], ENT_QUOTES, 'UTF-8'); ?></td>
             <td><?= $book['page_count']; ?></td>
             <td class="book-price"><?= $book['price']; ?> $</td>

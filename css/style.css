@@ -296,25 +296,6 @@ tbody tr:hover { background-color: #f0fae9; }
 td a { font-weight: bold; }
 
 
-/* Images des livres */
-.book-cover {
-    display: block;
-    width: auto;
-    height: auto;
-    max-width: 90px;
-    max-height: 130px;
-    margin: 0 auto;
-    border-radius: 4px;
-}
-
-.cover-unavailable {
-    display: block;
-    width: 90px;
-    color: #4a5568;
-    font-size: 12px;
-    text-align: center;
-}
-
 /* Permet de faire défiler le catalogue sur les petits écrans. */
 .catalogue-frame {
     width: 100%;
@@ -346,15 +327,11 @@ td a { font-weight: bold; }
     text-align: center;
 }
 
-/* Garde le prix et l'âge sur une seule ligne. */
 .book-price, .book-age {
     white-space: nowrap;
 }
 
-.books-table .book-cover {
-    max-width: 72px;
-    max-height: 104px;
-}
+
 
 footer {
     margin-top: 48px;

@@ -1,5 +1,7 @@
 <?php
+
 $id = filter_var($_GET['id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+
 if($id === false){
     header('location:book-index.php');
     die();
@@ -19,6 +21,7 @@ if($book){
 
 require_once('Classe/Category.php');
 require_once('Classe/Author.php');
+
 $categoryModel = new Category;
 $categories = $categoryModel->all();
 $authorModel = new Author;

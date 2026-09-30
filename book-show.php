@@ -1,5 +1,7 @@
 <?php
+
 $id = filter_var($_GET['id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+
 if($id === false){
     header('location:book-index.php');
     die();
@@ -20,6 +22,7 @@ if($book){
 $authors = $crud->authors($id);
 $category = $crud->selectId('category', $category_id);
 $categoryName = '';
+
 if($category){
     $categoryName = $category['name'];
 }
