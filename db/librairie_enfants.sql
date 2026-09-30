@@ -1,4 +1,3 @@
--- Librairie pour enfants : importer dans une base vide.
 CREATE DATABASE IF NOT EXISTS librairie_enfants CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE librairie_enfants;
 
